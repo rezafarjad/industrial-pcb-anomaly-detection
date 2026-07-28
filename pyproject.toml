@@ -44,7 +44,7 @@ dev = [
   "tomli>=2,<3; python_version < '3.11'",
 ]
 train = [
-  "datasets>=3,<5",
+  "datasets>=3,<6",
   "huggingface_hub>=0.27,<2",
   "joblib>=1.4,<2",
   "jupyterlab>=4,<5",
