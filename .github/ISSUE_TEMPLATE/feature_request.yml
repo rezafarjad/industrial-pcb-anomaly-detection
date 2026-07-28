@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a focused improvement with a concrete use case
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What inspection or developer problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the user-facing behavior and technical scope.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation approach
+      description: How could the change be tested without fabricated metrics?
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Scope checks
+      options:
+        - label: This is not a request to certify the demonstrator for autonomous production use.
+          required: true
+        - label: I searched existing issues for similar proposals.
+          required: true

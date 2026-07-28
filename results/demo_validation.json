@@ -1,6 +1,12 @@
 {
-  "generated_at": "2026-07-28T21:50:38.481354+00:00",
+  "generated_at": "2026-07-28T22:09:39.285930+00:00",
   "purpose": "Smoke validation on the bundled examples; not a dataset benchmark",
+  "acceptance": {
+    "known_good_decision": "No significant change",
+    "defective_decision": "Anomaly detected",
+    "minimum_iou": 0.35,
+    "minimum_recall": 0.75
+  },
   "all_passed": true,
   "cases": [
     {
@@ -50,6 +56,14 @@
           "working_width": 900,
           "decision_threshold": 20.0
         }
+      },
+      "localization": {
+        "intersection_pixels": 894,
+        "predicted_pixels": 1487,
+        "ground_truth_pixels": 1008,
+        "iou": 0.5584,
+        "precision": 0.6012,
+        "recall": 0.8869
       }
     },
     {
@@ -99,6 +113,14 @@
           "working_width": 900,
           "decision_threshold": 20.0
         }
+      },
+      "localization": {
+        "intersection_pixels": 964,
+        "predicted_pixels": 1834,
+        "ground_truth_pixels": 964,
+        "iou": 0.5256,
+        "precision": 0.5256,
+        "recall": 1.0
       }
     },
     {
@@ -156,6 +178,14 @@
           "working_width": 900,
           "decision_threshold": 20.0
         }
+      },
+      "localization": {
+        "intersection_pixels": 1667,
+        "predicted_pixels": 3410,
+        "ground_truth_pixels": 2048,
+        "iou": 0.4397,
+        "precision": 0.4889,
+        "recall": 0.814
       }
     }
   ]

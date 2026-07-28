@@ -13,7 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from pcb_anomaly import DetectorConfig, inspect  # noqa: E402
+from pcb_anomaly.metrics import align_binary_mask, binary_overlap  # noqa: E402
 from pcb_anomaly.samples import SAMPLES  # noqa: E402
+
+MINIMUM_IOU = 0.35
+MINIMUM_RECALL = 0.75
 
 
 def main() -> int:
@@ -25,12 +29,23 @@ def main() -> int:
         defective = Image.open(sample.defective).convert("RGB")
         good_result = inspect(reference, reference.copy(), config)
         defective_result = inspect(reference, defective, config)
+        ground_truth = align_binary_mask(
+            Image.open(sample.ground_truth),
+            defective_result.homography,
+            defective_result.reference_rgb.shape[:2],
+        )
+        localization = binary_overlap(
+            defective_result.anomaly_mask,
+            ground_truth,
+        )
         Image.fromarray(defective_result.overlay_rgb).save(
             ROOT / "results" / f"{category}_demo_overlay.png"
         )
         passed = (
             good_result.decision == "No significant change"
             and defective_result.decision == "Anomaly detected"
+            and localization["iou"] >= MINIMUM_IOU
+            and localization["recall"] >= MINIMUM_RECALL
         )
         if not passed:
             failures.append(category)
@@ -40,6 +55,10 @@ def main() -> int:
                 "passed": passed,
                 "known_good": good_result.report(),
                 "defective": defective_result.report(),
+                "localization": {
+                    key: round(value, 4) if isinstance(value, float) else value
+                    for key, value in localization.items()
+                },
             }
         )
 
@@ -48,6 +67,12 @@ def main() -> int:
         "purpose": (
             "Smoke validation on the bundled examples; not a dataset benchmark"
         ),
+        "acceptance": {
+            "known_good_decision": "No significant change",
+            "defective_decision": "Anomaly detected",
+            "minimum_iou": MINIMUM_IOU,
+            "minimum_recall": MINIMUM_RECALL,
+        },
         "all_passed": not failures,
         "cases": rows,
     }

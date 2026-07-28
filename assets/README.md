@@ -1,5 +1,8 @@
 # Application assets
 
+`app_demo.png` is a screenshot captured from the running Streamlit
+application after executing the bundled PCB1 inspection. It is not a mockup.
+
 `samples/pcb1`, `samples/pcb2`, and `samples/pcb3` each contain:
 
 - `reference.jpg`: a demonstration baseline reconstructed by inpainting the

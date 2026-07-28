@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from pcb_anomaly import DetectorConfig, inspect
+from pcb_anomaly.metrics import align_binary_mask, binary_overlap
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,6 +35,14 @@ def test_bundled_defect_is_detected(category):
     assert result.score >= result.threshold
     assert result.region_count >= 1
     assert 0.0 <= result.alignment_confidence <= 1.0
+    ground_truth = align_binary_mask(
+        _image(category, "ground_truth.jpg"),
+        result.homography,
+        result.reference_rgb.shape[:2],
+    )
+    overlap = binary_overlap(result.anomaly_mask, ground_truth)
+    assert overlap["iou"] >= 0.35
+    assert overlap["recall"] >= 0.75
 
 
 def test_invalid_detector_settings_are_rejected():

@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible application, detector, or packaging problem
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Do not attach private production images
+        or credentials. Follow SECURITY.md for sensitive reports.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Streamlit application
+        - Detector or alignment
+        - Command-line interface
+        - Windows launcher
+        - Docker
+        - Research notebook
+        - Documentation
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v1.0.0 or a commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, installation method, and browser
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Exact commands or UI steps using non-sensitive inputs
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and logs
+      render: shell
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I tested the latest `main` branch.
+          required: true
+        - label: I removed credentials and private production data.
+          required: true
+        - label: I searched existing issues for duplicates.
+          required: true
