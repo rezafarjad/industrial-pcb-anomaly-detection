@@ -43,7 +43,6 @@ Git. VisA is released under CC BY 4.0.
 ```bash
 git clone https://github.com/rezafarjad/industrial-pcb-anomaly-detection
 python -m venv .venv
-python -m venv .venv
 ```
 
 Activate the environment:
@@ -60,7 +59,6 @@ Install training dependencies and open Jupyter:
 
 ```bash
 pip install -r requirements-train.txt
-jupyter lab
 ```
 
 Open `notebooks/industrial_pcb_anomaly_detection_local.ipynb` and run
