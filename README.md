@@ -44,6 +44,8 @@ Git. VisA is released under CC BY 4.0.
 git clone YOUR_REPOSITORY_URL
 cd industrial-pcb-anomaly-detection
 python -m venv .venv
+cd industrial-pcb-anomaly-detection
+python -m venv .venv
 ```
 
 Activate the environment:
