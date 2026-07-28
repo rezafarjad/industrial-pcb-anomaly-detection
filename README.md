@@ -41,10 +41,8 @@ Git. VisA is released under CC BY 4.0.
 ## Local setup
 
 ```bash
-git clone YOUR_REPOSITORY_URL
-cd industrial-pcb-anomaly-detection
+git clone https://github.com/rezafarjad/industrial-pcb-anomaly-detection
 python -m venv .venv
-cd industrial-pcb-anomaly-detection
 python -m venv .venv
 ```
 
