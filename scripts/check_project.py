@@ -1,48 +1,59 @@
+"""Fast repository contract checks without starting Streamlit."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-errors = []
-
-app = ROOT / "streamlit_app.py"
-notebook = (
-    ROOT / "notebooks"
-    / "industrial_pcb_anomaly_detection_local.ipynb"
+REQUIRED = (
+    ROOT / "streamlit_app.py",
+    ROOT / "pcb_anomaly" / "reference_detector.py",
+    ROOT / "requirements.txt",
+    ROOT / "Start PCB Inspector.bat",
+    ROOT / "Create Desktop Shortcut.bat",
 )
-for path in (app, notebook, ROOT / "requirements.txt"):
-    if not path.exists():
-        errors.append(f"Missing repository file: {path}")
 
-if app.exists():
-    try:
-        compile(app.read_text(encoding="utf-8"), str(app), "exec")
-    except SyntaxError as error:
-        errors.append(f"streamlit_app.py: {error}")
 
-if notebook.exists():
+def main() -> int:
+    errors: list[str] = []
+    for path in REQUIRED:
+        if not path.is_file() or path.stat().st_size == 0:
+            errors.append(f"Missing or empty repository file: {path}")
+
+    for path in (*ROOT.glob("*.py"), *ROOT.glob("pcb_anomaly/*.py")):
+        try:
+            compile(path.read_text(encoding="utf-8"), str(path), "exec")
+        except (OSError, SyntaxError, UnicodeError) as error:
+            errors.append(f"{path.relative_to(ROOT)}: {error}")
+
+    notebook_path = (
+        ROOT / "notebooks" / "industrial_pcb_anomaly_detection_local.ipynb"
+    )
     try:
-        payload = json.loads(notebook.read_text(encoding="utf-8"))
-        if payload.get("nbformat") != 4:
-            errors.append("Notebook is not nbformat 4")
+        notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+        if notebook.get("nbformat") != 4:
+            errors.append("Research notebook is not nbformat 4")
     except Exception as error:
-        errors.append(f"Notebook validation: {error}")
+        errors.append(f"Research notebook cannot be read: {error}")
 
-for category in ("pcb1", "pcb2", "pcb3"):
-    directory = ROOT / "artifacts" / category
-    for filename in (
-        "pca.joblib",
-        "patchcore_memory.npy",
-        "config.json",
-    ):
-        path = directory / filename
-        if not path.exists():
-            errors.append(
-                f"Artifact not generated yet: {path.relative_to(ROOT)}"
-            )
+    for category in ("pcb1", "pcb2", "pcb3"):
+        for filename in ("reference.jpg", "defective.jpg", "ground_truth.jpg"):
+            path = ROOT / "assets" / "samples" / category / filename
+            if not path.is_file() or path.stat().st_size == 0:
+                errors.append(f"Missing sample asset: {path.relative_to(ROOT)}")
+    manifest = ROOT / "assets" / "samples" / "manifest.json"
+    try:
+        json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        errors.append(f"Sample manifest cannot be read: {error}")
 
-if errors:
-    print("\\n".join(f"[!] {error}" for error in errors))
-    raise SystemExit(1)
-print("Repository contract validated successfully.")
+    if errors:
+        print("\n".join(f"[!] {error}" for error in errors))
+        return 1
+    print("Repository contract validated successfully.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

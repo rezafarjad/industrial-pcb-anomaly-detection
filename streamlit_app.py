@@ -1,236 +1,231 @@
+"""Interactive PCB reference-comparison application."""
+
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
-import cv2
-import joblib
-import numpy as np
 import streamlit as st
-import torch
-import torch.nn.functional as F
 from PIL import Image
-from sklearn.neighbors import NearestNeighbors
-from torchvision import models, transforms
 
+from pcb_anomaly import DetectorConfig, inspect
+from pcb_anomaly.samples import SAMPLES, validate_samples
 
 ROOT = Path(__file__).resolve().parent
-ARTIFACT_ROOT = ROOT / "artifacts"
-CATEGORIES = ["pcb1", "pcb2", "pcb3"]
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-PREPROCESS = transforms.Compose(
-    [
-        transforms.Resize((256, 256)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
-        ),
-    ]
-)
 
 
-class ResNetPatchExtractor(torch.nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        network = models.resnet50(
-            weights=models.ResNet50_Weights.IMAGENET1K_V2
+def _open_image(source: Path | bytes) -> Image.Image:
+    if isinstance(source, Path):
+        return Image.open(source).convert("RGB")
+    return Image.open(io.BytesIO(source)).convert("RGB")
+
+
+def _png_bytes(image_array) -> bytes:
+    buffer = io.BytesIO()
+    Image.fromarray(image_array).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _header() -> None:
+    st.title("PCB Visual Inspector")
+    st.caption(
+        "Compare a board with a known-good reference, align the photographs, "
+        "and localize unexpected visual changes."
+    )
+
+
+def _sidebar() -> tuple[str, DetectorConfig]:
+    with st.sidebar:
+        st.header("Inspection setup")
+        source = st.radio(
+            "Image source",
+            ("Built-in demonstration", "Upload my own images"),
         )
-        self.stem = torch.nn.Sequential(
-            network.conv1,
-            network.bn1,
-            network.relu,
-            network.maxpool,
-            network.layer1,
+        st.divider()
+        st.subheader("Detector settings")
+        sensitivity = st.slider(
+            "Sensitivity",
+            min_value=0,
+            max_value=100,
+            value=65,
+            help="Higher values flag smaller or lower-contrast changes.",
         )
-        self.layer2 = network.layer2
-        self.layer3 = network.layer3
-        self.eval()
-        for parameter in self.parameters():
-            parameter.requires_grad_(False)
-
-    @torch.inference_mode()
-    def forward(
-        self, batch: torch.Tensor, patch_stride: int = 2
-    ) -> torch.Tensor:
-        x = self.stem(batch)
-        raw_layer2 = self.layer2(x)
-        raw_layer3 = self.layer3(raw_layer2)
-        layer2 = F.avg_pool2d(
-            raw_layer2, kernel_size=3, stride=1, padding=1
+        min_region_area = st.slider(
+            "Minimum changed region",
+            min_value=20,
+            max_value=500,
+            value=80,
+            step=10,
+            help="Suppresses tiny isolated pixels and camera noise.",
         )
-        layer3 = F.avg_pool2d(
-            raw_layer3, kernel_size=3, stride=1, padding=1
+        st.caption(
+            "Best results need the same PCB type, camera angle, lighting, "
+            "and fixture position for both photographs."
         )
-        layer3 = F.interpolate(
-            layer3,
-            size=layer2.shape[-2:],
-            mode="bilinear",
-            align_corners=False,
-        )
-        patches = torch.cat([layer2, layer3], dim=1)
-        patches = patches[:, :, ::patch_stride, ::patch_stride]
-        return patches.permute(0, 2, 3, 1).contiguous()
+    return source, DetectorConfig(
+        sensitivity=sensitivity,
+        min_region_area=min_region_area,
+    )
 
 
-@st.cache_resource(show_spinner="Loading ImageNet ResNet50…")
-def load_backbone() -> ResNetPatchExtractor:
-    return ResNetPatchExtractor().to(DEVICE)
-
-
-@st.cache_resource(show_spinner=False)
-def load_category_bundle(category: str) -> dict:
-    category_dir = ARTIFACT_ROOT / category
-    required = {
-        "PCA": category_dir / "pca.joblib",
-        "PatchCore memory": category_dir / "patchcore_memory.npy",
-        "configuration": category_dir / "config.json",
-    }
-    missing = [
-        f"{label}: {path.relative_to(ROOT)}"
-        for label, path in required.items()
-        if not path.exists()
-    ]
+def _demo_inputs() -> tuple[Image.Image | None, Image.Image | None, Path | None]:
+    missing = validate_samples()
     if missing:
-        raise FileNotFoundError(
-            "Exported model files are missing:\n" + "\n".join(missing)
+        st.error("Demonstration images are missing: " + ", ".join(missing))
+        return None, None, None
+
+    control_one, control_two = st.columns(2)
+    with control_one:
+        category = st.selectbox("Demonstration board", tuple(SAMPLES))
+    with control_two:
+        sample_type = st.selectbox(
+            "Test case",
+            ("Defective sample", "Known-good sanity check"),
+        )
+    sample = SAMPLES[category]
+    reference = _open_image(sample.reference)
+    candidate = (
+        _open_image(sample.defective)
+        if sample_type == "Defective sample"
+        else reference.copy()
+    )
+    ground_truth = (
+        sample.ground_truth if sample_type == "Defective sample" else None
+    )
+    st.info(
+        "This paired VisA demonstration uses a reference reconstructed from "
+        "the annotated defect region, solely to make localization easy to "
+        "verify. For real inspection, upload a genuine known-good photograph. "
+        "The sanity check compares the reference with itself."
+    )
+    return reference, candidate, ground_truth
+
+
+def _upload_inputs() -> tuple[Image.Image | None, Image.Image | None, None]:
+    reference_file = st.file_uploader(
+        "1. Upload a known-good reference PCB",
+        type=("png", "jpg", "jpeg", "bmp", "tif", "tiff"),
+        key="reference",
+    )
+    candidate_file = st.file_uploader(
+        "2. Upload the PCB to inspect",
+        type=("png", "jpg", "jpeg", "bmp", "tif", "tiff"),
+        key="candidate",
+    )
+    if reference_file is None or candidate_file is None:
+        st.info("Upload both images to enable inspection.")
+        return None, None, None
+    return (
+        _open_image(reference_file.getvalue()),
+        _open_image(candidate_file.getvalue()),
+        None,
+    )
+
+
+def _show_inputs(reference: Image.Image, candidate: Image.Image) -> None:
+    reference_column, candidate_column = st.columns(2)
+    with reference_column:
+        st.subheader("Known-good reference")
+        st.image(reference, use_container_width=True)
+    with candidate_column:
+        st.subheader("Board under inspection")
+        st.image(candidate, use_container_width=True)
+
+
+def _show_result(result, ground_truth: Path | None) -> None:
+    st.divider()
+    if result.decision == "Anomaly detected":
+        st.error("Anomaly detected — review the highlighted regions.")
+    else:
+        st.success("No significant change was detected.")
+
+    score_column, area_column, region_column, alignment_column = st.columns(4)
+    score_column.metric("Anomaly score", f"{result.score:.1f} / 100")
+    area_column.metric(
+        "Changed board area", f"{result.anomaly_area_percent:.3f}%"
+    )
+    region_column.metric("Review regions", result.region_count)
+    alignment_column.metric(
+        "Alignment confidence", f"{result.alignment_confidence:.0%}"
+    )
+
+    output_column, aligned_column = st.columns(2)
+    with output_column:
+        st.subheader("Inspection overlay")
+        st.image(result.overlay_rgb, use_container_width=True)
+    with aligned_column:
+        st.subheader("Aligned test image")
+        st.image(result.aligned_candidate_rgb, use_container_width=True)
+
+    if ground_truth is not None:
+        with st.expander("Show dataset ground-truth mask"):
+            st.image(
+                _open_image(ground_truth),
+                caption=(
+                    "VisA annotation in the original test-image coordinates; "
+                    "the detector overlay is shown after alignment."
+                ),
+                use_container_width=True,
+            )
+
+    report = json.dumps(result.report(), indent=2)
+    report_column, image_column = st.columns(2)
+    report_column.download_button(
+        "Download inspection report",
+        data=report,
+        file_name="pcb_inspection_report.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    image_column.download_button(
+        "Download annotated image",
+        data=_png_bytes(result.overlay_rgb),
+        file_name="pcb_inspection_overlay.png",
+        mime="image/png",
+        use_container_width=True,
+    )
+
+    with st.expander("Technical details"):
+        st.json(result.report())
+        st.caption(
+            "The runnable detector uses ORB/RANSAC image registration followed "
+            "by robust color and edge-change analysis. It does not require a "
+            "trained model. The optional research notebook explores PatchCore."
         )
 
-    memory = np.ascontiguousarray(
-        np.load(required["PatchCore memory"]).astype(np.float32)
+
+def main() -> None:
+    st.set_page_config(
+        page_title="PCB Visual Inspector",
+        page_icon="🔍",
+        layout="wide",
     )
-    index = NearestNeighbors(n_neighbors=1, metric="euclidean")
-    index.fit(memory)
-    return {
-        "pca": joblib.load(required["PCA"]),
-        "index": index,
-        "config": json.loads(required["configuration"].read_text()),
-    }
+    _header()
+    source, config = _sidebar()
+    if source == "Built-in demonstration":
+        reference, candidate, ground_truth = _demo_inputs()
+    else:
+        reference, candidate, ground_truth = _upload_inputs()
 
+    if reference is None or candidate is None:
+        return
+    _show_inputs(reference, candidate)
+    if st.button(
+        "Inspect board",
+        type="primary",
+        use_container_width=True,
+    ):
+        with st.spinner("Aligning images and measuring visual changes…"):
+            result = inspect(reference, candidate, config)
+        _show_result(result, ground_truth)
 
-def overlay_heatmap(
-    image: Image.Image, anomaly_map: np.ndarray
-) -> Image.Image:
-    rgb = np.asarray(
-        image.convert("RGB").resize((256, 256)), dtype=np.uint8
-    )
-    normalized = anomaly_map - float(anomaly_map.min())
-    normalized /= float(normalized.max()) + 1e-8
-    heatmap = cv2.applyColorMap(
-        np.uint8(np.clip(normalized, 0, 1) * 255),
-        cv2.COLORMAP_JET,
-    )
-    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-    return Image.fromarray(
-        cv2.addWeighted(rgb, 0.58, heatmap, 0.42, 0)
-    )
-
-
-@torch.inference_mode()
-def predict(image: Image.Image, category: str) -> tuple:
-    backbone = load_backbone()
-    bundle = load_category_bundle(category)
-    config = bundle["config"]
-
-    batch = PREPROCESS(image.convert("RGB")).unsqueeze(0).to(DEVICE)
-    feature_grid = backbone(
-        batch, patch_stride=int(config.get("patch_stride", 2))
-    )[0].cpu().numpy()
-    height, width, channels = feature_grid.shape
-
-    reduced = bundle["pca"].transform(
-        feature_grid.reshape(-1, channels)
-    )
-    distances, _ = bundle["index"].kneighbors(
-        np.ascontiguousarray(reduced.astype(np.float32)),
-        n_neighbors=1,
-    )
-    patch_scores = distances[:, 0]
-    score = float(patch_scores.max())
-    threshold = float(config["thresholds"]["patchcore"])
-    decision = "Defective" if score >= threshold else "Good"
-
-    anomaly_map = cv2.resize(
-        patch_scores.reshape(height, width),
-        (256, 256),
-        interpolation=cv2.INTER_CUBIC,
-    )
-    sigma = float(config.get("gaussian_sigma", 4.0))
-    anomaly_map = cv2.GaussianBlur(
-        anomaly_map, (0, 0), sigmaX=sigma, sigmaY=sigma
-    )
-    return score, threshold, decision, overlay_heatmap(image, anomaly_map)
-
-
-st.set_page_config(
-    page_title="PCB Anomaly Detection",
-    page_icon="🔍",
-    layout="wide",
-)
-
-st.title("Industrial PCB Anomaly Detection")
-st.caption(
-    "Unsupervised PatchCore inspection using ImageNet ResNet50 layer2/layer3 "
-    "features and category-specific PCA memory banks."
-)
-
-with st.sidebar:
-    st.header("Inspection settings")
-    category = st.selectbox("PCB category", CATEGORIES)
-    st.markdown(
-        "**Model:** PatchCore  \n"
-        "**Backbone:** ResNet50 IMAGENET1K_V2  \n"
-        "**Training data:** defect-free images only"
+    st.divider()
+    st.caption(
+        "Decision-support demonstrator only. Validate thresholds on your own "
+        "production images before operational use."
     )
 
-uploaded_file = st.file_uploader(
-    "Upload a PCB inspection image",
-    type=["png", "jpg", "jpeg", "bmp", "tif", "tiff"],
-)
 
-if uploaded_file is None:
-    st.info("Upload an image and choose its matching PCB category.")
-else:
-    inspection_image = Image.open(uploaded_file).convert("RGB")
-    input_column, output_column = st.columns(2)
-    with input_column:
-        st.subheader("Input")
-        st.image(inspection_image, use_container_width=True)
-
-    if st.button("Run inspection", type="primary", use_container_width=True):
-        try:
-            with st.spinner("Extracting patch features and scoring anomalies…"):
-                score, threshold, decision, overlay = predict(
-                    inspection_image, category
-                )
-            with output_column:
-                st.subheader("PatchCore localization")
-                st.image(overlay, use_container_width=True)
-
-            score_column, threshold_column, decision_column = st.columns(3)
-            score_column.metric("Anomaly score", f"{score:.4f}")
-            threshold_column.metric("Decision threshold", f"{threshold:.4f}")
-            decision_column.metric("Classification", decision)
-
-            if decision == "Defective":
-                st.error(
-                    "Defect suspected. Review the highlighted region before "
-                    "accepting the component."
-                )
-            else:
-                st.success(
-                    "No anomaly exceeded the calibrated category threshold."
-                )
-            st.caption(
-                "This portfolio demonstrator supports human inspection; it is "
-                "not certified for autonomous production decisions."
-            )
-        except FileNotFoundError as error:
-            st.error(str(error))
-            st.info(
-                "Copy the exported Colab artifacts into artifacts/pcb1, "
-                "artifacts/pcb2, and artifacts/pcb3 before deployment."
-            )
-        except Exception as error:
-            st.exception(error)
+if __name__ == "__main__":
+    main()

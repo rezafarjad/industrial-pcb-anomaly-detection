@@ -1,0 +1,32 @@
+{
+  "dataset": "Visual Anomaly (VisA)",
+  "source": "https://huggingface.co/datasets/BrachioLab/visa",
+  "upstream_project": "https://github.com/amazon-science/spot-diff",
+  "license": "CC BY 4.0",
+  "reference_derivation": {
+    "description": "Demonstration-only baseline reconstructed from the anomalous image by inpainting a dilated copy of the dataset ground-truth mask.",
+    "algorithm": "OpenCV TELEA inpainting",
+    "mask_dilation": "15 x 15 elliptical kernel",
+    "inpaint_radius": 7
+  },
+  "samples": [
+    {
+      "category": "pcb1",
+      "split": "pcb1.test",
+      "row_index": 35,
+      "label": 1
+    },
+    {
+      "category": "pcb2",
+      "split": "pcb2.test",
+      "row_index": 70,
+      "label": 1
+    },
+    {
+      "category": "pcb3",
+      "split": "pcb3.test",
+      "row_index": 0,
+      "label": 1
+    }
+  ]
+}

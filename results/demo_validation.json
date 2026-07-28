@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-07-28T21:50:38.481354+00:00",
+  "purpose": "Smoke validation on the bundled examples; not a dataset benchmark",
+  "all_passed": true,
+  "cases": [
+    {
+      "category": "pcb1",
+      "passed": true,
+      "known_good": {
+        "decision": "No significant change",
+        "anomaly_score": 0.0,
+        "decision_threshold": 20.0,
+        "anomaly_area_percent": 0.0,
+        "region_count": 0,
+        "alignment": {
+          "method": "ORB homography",
+          "confidence": 1.0
+        },
+        "regions": [],
+        "settings": {
+          "sensitivity": 65,
+          "min_region_area": 80,
+          "working_width": 900,
+          "decision_threshold": 20.0
+        }
+      },
+      "defective": {
+        "decision": "Anomaly detected",
+        "anomaly_score": 100.0,
+        "decision_threshold": 20.0,
+        "anomaly_area_percent": 0.682,
+        "region_count": 1,
+        "alignment": {
+          "method": "ORB homography",
+          "confidence": 0.9962
+        },
+        "regions": [
+          {
+            "x": 371,
+            "y": 430,
+            "width": 60,
+            "height": 42,
+            "area_pixels": 1487,
+            "peak_change": 65.215
+          }
+        ],
+        "settings": {
+          "sensitivity": 65,
+          "min_region_area": 80,
+          "working_width": 900,
+          "decision_threshold": 20.0
+        }
+      }
+    },
+    {
+      "category": "pcb2",
+      "passed": true,
+      "known_good": {
+        "decision": "No significant change",
+        "anomaly_score": 0.0,
+        "decision_threshold": 20.0,
+        "anomaly_area_percent": 0.0,
+        "region_count": 0,
+        "alignment": {
+          "method": "ORB homography",
+          "confidence": 1.0
+        },
+        "regions": [],
+        "settings": {
+          "sensitivity": 65,
+          "min_region_area": 80,
+          "working_width": 900,
+          "decision_threshold": 20.0
+        }
+      },
+      "defective": {
+        "decision": "Anomaly detected",
+        "anomaly_score": 100.0,
+        "decision_threshold": 20.0,
+        "anomaly_area_percent": 0.455,
+        "region_count": 1,
+        "alignment": {
+          "method": "ORB homography",
+          "confidence": 0.9985
+        },
+        "regions": [
+          {
+            "x": 341,
+            "y": 429,
+            "width": 45,
+            "height": 62,
+            "area_pixels": 1834,
+            "peak_change": 76.544
+          }
+        ],
+        "settings": {
+          "sensitivity": 65,
+          "min_region_area": 80,
+          "working_width": 900,
+          "decision_threshold": 20.0
+        }
+      }
+    },
+    {
+      "category": "pcb3",
+      "passed": true,
+      "known_good": {
+        "decision": "No significant change",
+        "anomaly_score": 0.0,
+        "decision_threshold": 20.0,
+        "anomaly_area_percent": 0.0,
+        "region_count": 0,
+        "alignment": {
+          "method": "ORB homography",
+          "confidence": 1.0
+        },
+        "regions": [],
+        "settings": {
+          "sensitivity": 65,
+          "min_region_area": 80,
+          "working_width": 900,
+          "decision_threshold": 20.0
+        }
+      },
+      "defective": {
+        "decision": "Anomaly detected",
+        "anomaly_score": 100.0,
+        "decision_threshold": 20.0,
+        "anomaly_area_percent": 2.7855,
+        "region_count": 2,
+        "alignment": {
+          "method": "ORB homography",
+          "confidence": 0.9973
+        },
+        "regions": [
+          {
+            "x": 226,
+            "y": 271,
+            "width": 137,
+            "height": 58,
+            "area_pixels": 3201,
+            "peak_change": 104.82
+          },
+          {
+            "x": 199,
+            "y": 242,
+            "width": 17,
+            "height": 18,
+            "area_pixels": 209,
+            "peak_change": 51.782
+          }
+        ],
+        "settings": {
+          "sensitivity": 65,
+          "min_region_area": 80,
+          "working_width": 900,
+          "decision_threshold": 20.0
+        }
+      }
+    }
+  ]
+}
