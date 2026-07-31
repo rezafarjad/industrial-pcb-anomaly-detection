@@ -232,4 +232,4 @@ in the sample manifest and `THIRD_PARTY_NOTICES.md`.
 
 No open-source license has been selected for the original source code yet.
 Public visibility does not grant reuse rights by itself. The bundled VisA
-derivatives remain subject to their separate CC BY 4.0 terms.
+derivatives remain subject to their separate CC BY 4.0 terms
