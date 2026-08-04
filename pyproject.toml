@@ -31,9 +31,9 @@ classifiers = [
 ]
 dependencies = [
   "numpy>=1.26,<3",
-  "opencv-python-headless>=4.10,<5",
+  "opencv-python-headless>=4.10,<6",
   "Pillow>=10,<13",
-  "streamlit>=1.40,<1.50",
+  "streamlit>=1.40,<1.61",
 ]
 
 [project.optional-dependencies]
